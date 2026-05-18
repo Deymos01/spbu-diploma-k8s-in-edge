@@ -1,0 +1,202 @@
+# Генерация манифеста, описывающего узлы кластера
+python3 scripts/01_generate_nodes.py
+
+
+# Генерация манифеста, описывающего стратегии планировщика
+python3 scripts/02_generate_scheduler_config.py --reset-shape
+
+
+# Генерация манифестов с различными сценариями нагрузки
+
+# grouped-сценарии
+python3 scripts/03_generate_workload.py --scenario-name light --scheduler all --order grouped --namespace edge-exp
+python3 scripts/03_generate_workload.py --scenario-name balanced-medium --scheduler all --order grouped --namespace edge-exp
+python3 scripts/03_generate_workload.py --scenario-name cpu-fragmentation --scheduler all --order grouped --namespace edge-exp
+python3 scripts/03_generate_workload.py --scenario-name memory-pressure --scheduler all --order grouped --namespace edge-exp
+python3 scripts/03_generate_workload.py --scenario-name cpu-memory-imbalance --scheduler all --order grouped --namespace edge-exp
+
+# Доп. порядки создания подов в кластере для сценария cpu-fragmentation
+python3 scripts/03_generate_workload.py --scenario-name cpu-fragmentation --scheduler all --order small-first --namespace edge-exp
+python3 scripts/03_generate_workload.py --scenario-name cpu-fragmentation --scheduler all --order heavy-first --namespace edge-exp
+python3 scripts/03_generate_workload.py --scenario-name cpu-fragmentation --scheduler all --order shuffled --seed 42 --namespace edge-exp
+
+
+# Инициализация кластера (в docker)
+python3 scripts/04_create_kwok_cluster.py \
+  --cluster-name edge-kwok \
+  --runtime docker \
+  --kube-scheduler-config configs/scheduler/scheduler-profiles.yaml
+
+
+# Применение манифеста (инициализация узлов в кластере)
+kubectl apply -f manifests/nodes.yaml
+
+
+# Проверка
+kubectl get nodes -L node-class
+
+######################
+# Запуск экспериментов
+
+# GROUPED
+
+# light
+python3 scripts/05_run_experiment.py --workload manifests/workloads/light-grouped-least-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/light-grouped-most-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/light-grouped-requested-ratio.yaml
+
+# balanced-medium
+python3 scripts/05_run_experiment.py --workload manifests/workloads/balanced-medium-grouped-least-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/balanced-medium-grouped-most-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/balanced-medium-grouped-requested-ratio.yaml
+
+# cpu-fragmentation
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-grouped-least-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-grouped-most-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-grouped-requested-ratio.yaml
+
+# memory-pressure
+python3 scripts/05_run_experiment.py --workload manifests/workloads/memory-pressure-grouped-least-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/memory-pressure-grouped-most-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/memory-pressure-grouped-requested-ratio.yaml
+
+# cpu-memory-imbalance
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-memory-imbalance-grouped-least-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-memory-imbalance-grouped-most-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-memory-imbalance-grouped-requested-ratio.yaml
+
+# CPU-FRAGMENTATION
+
+# small-first
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-small-first-least-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-small-first-most-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-small-first-requested-ratio.yaml
+
+# heavy-first
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-heavy-first-least-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-heavy-first-most-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-heavy-first-requested-ratio.yaml
+
+# shuffled
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-shuffled-least-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-shuffled-most-allocated.yaml
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-shuffled-requested-ratio.yaml
+
+# EDGE-FIT (CUSTOM)
+
+python3 scripts/05_run_experiment.py --workload manifests/workloads/light-grouped-edge-aware.yaml --experiment-name light-grouped-edgefit
+python3 scripts/05_run_experiment.py --workload manifests/workloads/balanced-medium-grouped-edge-aware.yaml --experiment-name balanced-medium-grouped-edgefit
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-grouped-edge-aware.yaml --experiment-name cpu-fragmentation-grouped-edgefit
+python3 scripts/05_run_experiment.py --workload manifests/workloads/memory-pressure-grouped-edge-aware.yaml --experiment-name memory-pressure-grouped-edgefit
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-memory-imbalance-grouped-edge-aware.yaml --experiment-name cpu-memory-imbalance-grouped-edgefit
+
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-memory-imbalance-grouped-edge-aware.yaml --experiment-name cpu-memory-imbalance-grouped-edgefit
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-small-first-edge-aware.yaml --experiment-name cpu-fragmentation-small-first-edgefit
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-heavy-first-edge-aware.yaml --experiment-name cpu-fragmentation-heavy-first-edgefit
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-shuffled-edge-aware.yaml --experiment-name cpu-fragmentation-shuffled-edgefit
+
+# Эксперименты с различными весами
+
+# weights:
+#  class: 0.45
+#  packing: 0.20
+#  balance: 0.20
+#  fragmentation: 0.15
+python3 scripts/05_run_experiment.py --workload manifests/workloads/light-grouped-edge-aware.yaml --experiment-name light-grouped-edgefit-class045
+python3 scripts/05_run_experiment.py --workload manifests/workloads/balanced-medium-grouped-edge-aware.yaml --experiment-name balanced-medium-grouped-edgefit-class045
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-grouped-edge-aware.yaml --experiment-name cpu-fragmentation-grouped-edgefit-class045
+python3 scripts/05_run_experiment.py --workload manifests/workloads/memory-pressure-grouped-edge-aware.yaml --experiment-name memory-pressure-grouped-edgefit-class045
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-memory-imbalance-grouped-edge-aware.yaml --experiment-name cpu-memory-imbalance-grouped-edgefit-class045
+
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-small-first-edge-aware.yaml --experiment-name cpu-fragmentation-small-first-edgefit-class045
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-heavy-first-edge-aware.yaml --experiment-name cpu-fragmentation-heavy-first-edgefit-class045
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-shuffled-edge-aware.yaml --experiment-name cpu-fragmentation-shuffled-edgefit-class045
+
+# weights:
+#  class: 0.20
+#  packing: 0.40
+#  balance: 0.20
+#  fragmentation: 0.20
+python3 scripts/05_run_experiment.py --workload manifests/workloads/light-grouped-edge-aware.yaml --experiment-name light-grouped-edgefit-packing040
+python3 scripts/05_run_experiment.py --workload manifests/workloads/balanced-medium-grouped-edge-aware.yaml --experiment-name balanced-medium-grouped-edgefit-packing040
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-grouped-edge-aware.yaml --experiment-name cpu-fragmentation-grouped-edgefit-packing040
+python3 scripts/05_run_experiment.py --workload manifests/workloads/memory-pressure-grouped-edge-aware.yaml --experiment-name memory-pressure-grouped-edgefit-packing040
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-memory-imbalance-grouped-edge-aware.yaml --experiment-name cpu-memory-imbalance-grouped-edgefit-packing040
+
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-small-first-edge-aware.yaml --experiment-name cpu-fragmentation-small-first-edgefit-packing040
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-heavy-first-edge-aware.yaml --experiment-name cpu-fragmentation-heavy-first-edgefit-packing040
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-shuffled-edge-aware.yaml --experiment-name cpu-fragmentation-shuffled-edgefit-packing040
+
+# weights:
+#  class: 0.25
+#  packing: 0.20
+#  balance: 0.35
+#  fragmentation: 0.20
+python3 scripts/05_run_experiment.py --workload manifests/workloads/light-grouped-edge-aware.yaml --experiment-name light-grouped-edgefit-balance035
+python3 scripts/05_run_experiment.py --workload manifests/workloads/balanced-medium-grouped-edge-aware.yaml --experiment-name balanced-medium-grouped-edgefit-balance035
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-grouped-edge-aware.yaml --experiment-name cpu-fragmentation-grouped-edgefit-balance035
+python3 scripts/05_run_experiment.py --workload manifests/workloads/memory-pressure-grouped-edge-aware.yaml --experiment-name memory-pressure-grouped-edgefit-balance035
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-memory-imbalance-grouped-edge-aware.yaml --experiment-name cpu-memory-imbalance-grouped-edgefit-balance035
+
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-small-first-edge-aware.yaml --experiment-name cpu-fragmentation-small-first-edgefit-balance035
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-heavy-first-edge-aware.yaml --experiment-name cpu-fragmentation-heavy-first-edgefit-balance035
+python3 scripts/05_run_experiment.py --workload manifests/workloads/cpu-fragmentation-shuffled-edge-aware.yaml --experiment-name cpu-fragmentation-shuffled-edgefit-balance035
+
+######################
+
+
+# Сбор состояния
+# Для fish
+for dir in data/raw/*
+    if test -d $dir
+        python3 scripts/06_collect_state.py --raw-dir $dir
+    end
+end
+
+# Для bash
+for dir in data/raw/*; do
+  if [ -d "$dir" ]; then
+    python3 scripts/06_collect_state.py --raw-dir "$dir"
+  fi
+done
+
+
+# Расчёт метрик
+# Для fish
+for dir in data/raw/*
+    if test -d $dir
+        set experiment_name (basename $dir)
+
+        python3 scripts/07_calculate_metrics.py \
+            --input-dir $dir \
+            --output-dir data/processed/$experiment_name
+    end
+end
+
+# Для bash
+for dir in data/raw/*; do
+  if [ -d "$dir" ]; then
+    experiment_name="$(basename "$dir")"
+
+    python3 scripts/07_calculate_metrics.py \
+      --input-dir "$dir" \
+      --output-dir "data/processed/$experiment_name"
+  fi
+done
+
+
+# Построение графиков
+python3 scripts/08_compare_results.py \
+  --comparison-name all-grouped-scenarios \
+  --experiments data/processed/light-grouped-* \
+                data/processed/balanced-medium-grouped-* \
+                data/processed/cpu-fragmentation-grouped-* \
+                data/processed/memory-pressure-grouped-* \
+                data/processed/cpu-memory-imbalance-grouped-*
+
+python3 scripts/08_compare_results.py \
+  --comparison-name cpu-fragmentation-all-orders \
+  --experiments data/processed/cpu-fragmentation-grouped-* \
+                data/processed/cpu-fragmentation-small-first-* \
+                data/processed/cpu-fragmentation-heavy-first-* \
+                data/processed/cpu-fragmentation-shuffled-*
