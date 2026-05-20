@@ -4,3 +4,5 @@ manifests/
 env/
 data/
 configs/
+
+edgefit-scheduler/
