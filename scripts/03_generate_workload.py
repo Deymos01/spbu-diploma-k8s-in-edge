@@ -32,6 +32,9 @@ ALL_SCHEDULERS = [
     "least-allocated-scheduler",
     "most-allocated-scheduler",
     "requested-ratio-scheduler",
+    "requested-ratio-soft-scheduler",
+    "requested-ratio-aggressive-scheduler",
+    "requested-ratio-balanced-scheduler",
     "edge-aware-scheduler",
 ]
 
