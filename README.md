@@ -8,4 +8,4 @@
 
 Реализация кастомного планировщика EdgeFit вынесена в отдельный fork репозитория `kubernetes-sigs/scheduler-plugins`.
 
-Репозиторий с реализацией: https://github.com/Deymos01/scheduler-plugins/tree/edgefit
+Репозиторий с реализацией: https://github.com/Deymos01/scheduler-plugins-k8s-in-edge/tree/edgefit
